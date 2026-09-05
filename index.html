@@ -236,6 +236,19 @@ let lastPython = '';
 let lastCSharp = '';
 let imageBase64 = null; // data URL of uploaded image, if any
 
+// Remember proxy URL + model across sessions, meow
+const savedUrl = localStorage.getItem('pytocs_proxyUrl');
+const savedModel = localStorage.getItem('pytocs_model');
+if (savedUrl) workerUrlEl.value = savedUrl;
+if (savedModel) modelEl.value = savedModel;
+
+workerUrlEl.addEventListener('input', () => {
+  localStorage.setItem('pytocs_proxyUrl', workerUrlEl.value.trim());
+});
+modelEl.addEventListener('input', () => {
+  localStorage.setItem('pytocs_model', modelEl.value.trim());
+});
+
 imgInput.addEventListener('change', () => {
   const file = imgInput.files[0];
   if (!file) return;
