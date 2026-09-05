@@ -189,7 +189,7 @@
   <label>proxy URL</label>
   <input type="text" id="workerUrl" placeholder="https://your-project.vercel.app/api/translate">
   <label>model</label>
-  <input type="text" id="modelName" placeholder="diffusiongemma-26b-a4b-it" value="diffusiongemma-26b-a4b-it">
+  <input type="text" id="modelName" placeholder="google/diffusiongemma-26b-a4b-it" value="google/diffusiongemma-26b-a4b-it">
 </div>
 
 <div class="panes">
@@ -287,7 +287,8 @@ async function callNIM(promptText, maxTokens) {
       model: modelEl.value.trim(),
       messages: [{ role: 'user', content }],
       max_tokens: maxTokens,
-      temperature: 0.15
+      temperature: 0.15,
+      chat_template_kwargs: { enable_thinking: false }
     })
   });
   if (!res.ok) {
