@@ -3,9 +3,8 @@
 // api/translate.js  →  https://your-project.vercel.app/api/translate
 
 export default async function handler(req, res) {
-  // Lock this down to your GitHub Pages URL once it's live, e.g.
-  // "https://yourusername.github.io"
-  const allowedOrigin = "https://yourusername.github.io";
+  // Locked to Lucas's real GitHub Pages URL.
+  const allowedOrigin = "https://ripmrlucas.github.io";
   res.setHeader("Access-Control-Allow-Origin", allowedOrigin);
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
