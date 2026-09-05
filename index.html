@@ -177,6 +177,83 @@
   }
   .explain-box.show { display: block; }
   ::placeholder { color: #5a5e6e; }
+
+  .mode-tabs {
+    display: flex;
+    gap: 0.4rem;
+    padding: 0.7rem 1.5rem 0;
+  }
+  .mode-tab {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-bottom: none;
+    color: var(--dim);
+    padding: 0.5rem 1rem;
+    border-radius: 6px 6px 0 0;
+    font-size: 0.8rem;
+    cursor: pointer;
+  }
+  .mode-tab.active {
+    color: var(--text);
+    background: var(--panel);
+    border-color: var(--cs-accent);
+  }
+
+  .chat-toolbar {
+    padding: 0.6rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+  }
+  #clearChatBtn { font-size: 0.75rem; color: var(--dim); }
+  .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.2rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+    min-height: 340px;
+    max-height: 60vh;
+  }
+  .chat-msg {
+    max-width: 85%;
+    padding: 0.6rem 0.9rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .chat-msg.user {
+    align-self: flex-end;
+    background: var(--cs-accent);
+    color: #fff;
+  }
+  .chat-msg.assistant {
+    align-self: flex-start;
+    background: var(--panel);
+    border: 1px solid var(--border);
+  }
+  .chat-msg.error {
+    align-self: center;
+    background: rgba(255,107,107,0.1);
+    border: 1px solid var(--danger);
+    color: var(--danger);
+    font-size: 0.78rem;
+  }
+  .chat-input {
+    flex: 1;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 0.6rem 0.8rem;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 0.85rem;
+    resize: vertical;
+  }
 </style>
 </head>
 <body>
@@ -192,31 +269,50 @@
   <input type="text" id="modelName" placeholder="google/diffusiongemma-26b-a4b-it" value="google/diffusiongemma-26b-a4b-it">
 </div>
 
-<div class="panes">
-  <div class="pane">
-    <div class="pane-label">
-      <span class="tag-py">python</span>
-      <span class="img-controls">
-        <label for="imgInput" class="img-btn">+ image</label>
-        <input type="file" id="imgInput" accept="image/*" hidden>
-        <span id="imgName"></span>
-      </span>
+<div class="mode-tabs">
+  <button class="mode-tab active" id="tabTranslate">Translator</button>
+  <button class="mode-tab" id="tabChat">Chat</button>
+</div>
+
+<div id="translatorView">
+  <div class="panes">
+    <div class="pane">
+      <div class="pane-label">
+        <span class="tag-py">python</span>
+        <span class="img-controls">
+          <label for="imgInput" class="img-btn">+ image</label>
+          <input type="file" id="imgInput" accept="image/*" hidden>
+          <span id="imgName"></span>
+        </span>
+      </div>
+      <div id="imgPreviewWrap"></div>
+      <textarea id="pyInput" placeholder="print(&quot;Hello, World!&quot;)  — or drop a screenshot of code above" spellcheck="false"></textarea>
     </div>
-    <div id="imgPreviewWrap"></div>
-    <textarea id="pyInput" placeholder="print(&quot;Hello, World!&quot;)  — or drop a screenshot of code above" spellcheck="false"></textarea>
+    <div class="pane">
+      <div class="pane-label"><span class="tag-cs">c#</span><span>output</span></div>
+      <pre id="csOutput" class="cs-output empty">// translation shows up here</pre>
+    </div>
   </div>
-  <div class="pane">
-    <div class="pane-label"><span class="tag-cs">c#</span><span>output</span></div>
-    <pre id="csOutput" class="cs-output empty">// translation shows up here</pre>
+
+  <div class="explain-box" id="explainBox"></div>
+
+  <div class="controls">
+    <button id="translateBtn">Translate</button>
+    <button id="explainBtn" disabled>Explanation</button>
+    <span class="status" id="status"></span>
   </div>
 </div>
 
-<div class="explain-box" id="explainBox"></div>
-
-<div class="controls">
-  <button id="translateBtn">Translate</button>
-  <button id="explainBtn" disabled>Explanation</button>
-  <span class="status" id="status"></span>
+<div id="chatView" style="display:none;">
+  <div class="chat-toolbar">
+    <button id="clearChatBtn">Clear history</button>
+    <span class="status" id="chatStatus"></span>
+  </div>
+  <div id="chatMessages" class="chat-messages"></div>
+  <div class="controls">
+    <textarea id="chatInput" class="chat-input" placeholder="Ask anything... meow" rows="2"></textarea>
+    <button id="chatSendBtn">Send</button>
+  </div>
 </div>
 
 <script>
@@ -346,6 +442,155 @@ explainBtn.addEventListener('click', async () => {
     explainBox.textContent = `couldn't get an explanation: ${err.message}`;
   } finally {
     explainBtn.disabled = false;
+  }
+});
+
+// ---------- Mode tabs ----------
+const tabTranslate = document.getElementById('tabTranslate');
+const tabChat = document.getElementById('tabChat');
+const translatorView = document.getElementById('translatorView');
+const chatView = document.getElementById('chatView');
+
+tabTranslate.addEventListener('click', () => {
+  tabTranslate.classList.add('active');
+  tabChat.classList.remove('active');
+  translatorView.style.display = '';
+  chatView.style.display = 'none';
+});
+tabChat.addEventListener('click', () => {
+  tabChat.classList.add('active');
+  tabTranslate.classList.remove('active');
+  chatView.style.display = 'flex';
+  chatView.style.flexDirection = 'column';
+  translatorView.style.display = 'none';
+});
+
+// ---------- Chat mode (streaming + saved history) ----------
+const chatMessages = document.getElementById('chatMessages');
+const chatInput = document.getElementById('chatInput');
+const chatSendBtn = document.getElementById('chatSendBtn');
+const chatStatus = document.getElementById('chatStatus');
+const clearChatBtn = document.getElementById('clearChatBtn');
+
+let chatHistory = [];
+try {
+  chatHistory = JSON.parse(localStorage.getItem('pytocs_chatHistory') || '[]');
+} catch { chatHistory = []; }
+
+function saveChatHistory() {
+  try {
+    localStorage.setItem('pytocs_chatHistory', JSON.stringify(chatHistory));
+  } catch (err) {
+    chatStatus.textContent = 'history too big to save, meow';
+  }
+}
+
+function renderMessage(role, text) {
+  const div = document.createElement('div');
+  div.className = `chat-msg ${role}`;
+  div.textContent = text;
+  chatMessages.appendChild(div);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+  return div;
+}
+
+function renderChatHistory() {
+  chatMessages.innerHTML = '';
+  chatHistory.forEach(m => renderMessage(m.role, m.content));
+}
+renderChatHistory();
+
+clearChatBtn.addEventListener('click', () => {
+  chatHistory = [];
+  saveChatHistory();
+  renderChatHistory();
+  chatStatus.textContent = 'cleared';
+});
+
+async function sendChatMessage() {
+  const text = chatInput.value.trim();
+  if (!text) return;
+  if (!workerUrlEl.value.trim()) { chatStatus.textContent = 'need a proxy URL (set it in Translator tab)'; return; }
+
+  // proxy URL for chat is the same host, swap /api/translate -> /api/chat
+  const chatUrl = workerUrlEl.value.trim().replace(/\/api\/translate\/?$/, '/api/chat');
+
+  chatHistory.push({ role: 'user', content: text });
+  renderMessage('user', text);
+  saveChatHistory();
+  chatInput.value = '';
+  chatSendBtn.disabled = true;
+  chatStatus.textContent = '';
+
+  const assistantDiv = renderMessage('assistant', '...');
+  let fullText = '';
+
+  try {
+    const res = await fetch(chatUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: modelEl.value.trim(),
+        messages: chatHistory,
+        max_tokens: 16384,
+        temperature: 0.15,
+        chat_template_kwargs: { enable_thinking: false }
+      })
+    });
+
+    if (!res.ok || !res.body) {
+      const errText = await res.text();
+      throw new Error(`API error ${res.status}: ${errText}`);
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop(); // keep incomplete line for next chunk
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith('data:')) continue;
+        const dataStr = trimmed.slice(5).trim();
+        if (dataStr === '[DONE]') continue;
+        try {
+          const parsed = JSON.parse(dataStr);
+          const delta = parsed.choices?.[0]?.delta?.content;
+          if (delta) {
+            fullText += delta;
+            assistantDiv.textContent = fullText;
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+          }
+        } catch {
+          // ignore malformed SSE chunk, keep streaming
+        }
+      }
+    }
+
+    if (!fullText) fullText = '(empty response, meow)';
+    assistantDiv.textContent = fullText;
+    chatHistory.push({ role: 'assistant', content: fullText });
+    saveChatHistory();
+  } catch (err) {
+    assistantDiv.remove();
+    renderMessage('error', `Error: ${err.message}`);
+    chatStatus.textContent = 'something broke, see message above';
+  } finally {
+    chatSendBtn.disabled = false;
+  }
+}
+
+chatSendBtn.addEventListener('click', sendChatMessage);
+chatInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendChatMessage();
   }
 });
 </script>
